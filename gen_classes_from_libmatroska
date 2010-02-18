@@ -1,0 +1,82 @@
+#!/bin/sh
+
+#
+# Distributed under the MIT license
+# see the file COPYING for details
+# or visit http://www.opensource.org/licenses/mit-license.php
+#
+# $Id: gen_classes_from_libmatroska 758 2004-09-08 15:52:47Z mosu $
+#
+# A simple script for converting classes from the
+# libmatroska source code into Ruby classes useful for
+# matroska.rb
+#
+# Written by Moritz Bunkus <moritz@bunkus.org>.
+#
+
+if [ "$MATROSKADIR" == "" ]; then
+  MATROSKADIR="$HOME/prog/video/libmatroska/src"
+fi
+if [ ! -f "$MATROSKADIR/KaxSegment.cpp" ]; then
+  MATROSKADIR="$MATROSKADIR/src"
+fi
+if [ ! -f "$MATROSKADIR/KaxSegment.cpp" ]; then
+  echo "Please set the MATROSKADIR environment variable to the libmatroska"
+  echo "source directory."
+  exit 1
+fi
+
+cat <<EOF
+#!/usr/bin/ruby
+
+#
+# Distributed under the MIT license
+# see the file COPYING for details
+# or visit http://www.opensource.org/licenses/mit-license.php
+#
+# \$Id\$
+#
+# Classes for the "Matroska EBML doc type". Generated with
+# gen_classes_from_libmatroska.
+#
+# Written by Moritz Bunkus <moritz@bunkus.org>.
+#
+
+# This file is generated automatically by the
+# gen_classes_from_libmatroska script and should not be
+# modified manually!
+
+require "ebml"
+
+module Matroska
+EOF
+
+for CPP in "$MATROSKADIR"/*.cpp ; do
+  BASE=`basename "$CPP" .cpp | sed -e 's:.*/::'`
+  H="$MATROSKADIR/../matroska/$BASE.h"
+
+  FIRST=1
+
+  egrep '^EbmlId.*TheId' $CPP | (while read LINE; do
+    ID=`echo "$LINE" | sed 's/TheId.*(/ /' | awk '{ print $3 }' | sed s/,// | lower`
+    LENGTH=`echo "$LINE" | sed 's/TheId.*(/ /' | awk '{ print $4 }' | sed 's/);//'`
+    NAME=`echo "$LINE" | sed 's/_TheId.*//' | awk '{ print $2 }' | sed s/Kax//`
+    PARENT=`egrep "class.*Kax${NAME} *:" $H | sed 's/:/ : /g' | awk '{ print $6 }' | sed 's/^Ebml/Ebml::/'`
+    if [ $FIRST -eq 1 ]; then
+      echo "  # From ${BASE}.cpp"
+      FIRST=0
+    fi
+    cat <<EOF
+  class ${NAME} < ${PARENT}
+    def ${NAME}.global_id
+      @@id ||= Ebml::Id.new(${ID}, ${LENGTH})
+      return @@id
+    end
+  end
+
+EOF
+
+    done)
+done
+
+echo end
