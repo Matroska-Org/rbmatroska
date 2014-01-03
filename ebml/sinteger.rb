@@ -19,7 +19,11 @@ module Ebml
     attr_accessor :value
 
     def read(ef)
-      byte = ef.io.readchar
+      if RUBY_VERSION >= '1.8.7'
+        byte = ef.io.readbyte
+      else
+        byte = ef.io.readchar
+      end
       if ((byte & 0x80) == 0x80)
         @value = -1 << 8
       else
@@ -27,7 +31,11 @@ module Ebml
       end
       @value |= byte
       2.upto(@data_size) do |i|
-        byte = ef.io.readchar
+        if RUBY_VERSION >= '1.8.7'
+          byte = ef.io.readbyte
+        else
+          byte = ef.io.readchar
+        end
         @value = (@value << 1) | byte
       end
 
