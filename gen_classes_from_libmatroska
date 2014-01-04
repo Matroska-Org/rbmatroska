@@ -17,10 +17,10 @@
 if [ "$MATROSKADIR" == "" ]; then
   MATROSKADIR="$HOME/prog/video/libmatroska/src"
 fi
-if [ ! -f "$MATROSKADIR/KaxSegment.cpp" ]; then
+if [ ! -f "$MATROSKADIR/KaxSemantic.cpp" ]; then
   MATROSKADIR="$MATROSKADIR/src"
 fi
-if [ ! -f "$MATROSKADIR/KaxSegment.cpp" ]; then
+if [ ! -f "$MATROSKADIR/KaxSemantic.cpp" ]; then
   echo "Please set the MATROSKADIR environment variable to the libmatroska"
   echo "source directory."
   exit 1
@@ -51,23 +51,32 @@ require "ebml"
 module Matroska
 EOF
 
-for CPP in "$MATROSKADIR"/*.cpp ; do
-  BASE=`basename "$CPP" .cpp | sed -e 's:.*/::'`
-  H="$MATROSKADIR/../matroska/$BASE.h"
+DEFINE_MKX_MASTER="Ebml::Master"
+DEFINE_MKX_MASTER_CONS="Ebml::Master"
+DEFINE_MKX_MASTER_ORPHAN="Ebml::Master"
+DEFINE_MKX_UINTEGER="Ebml::UInteger"
+DEFINE_MKX_UINTEGER_DEF="Ebml::UInteger"
+DEFINE_MKX_SINTEGER="Ebml::SInteger"
+DEFINE_MKX_SINTEGER_DEF="Ebml::SInteger"
+DEFINE_MKX_SINTEGER_CONS="Ebml::SInteger"
+DEFINE_MKX_STRING="Ebml::String"
+DEFINE_MKX_STRING_DEF="Ebml::String"
+DEFINE_MKX_UNISTRING="Ebml::UnicodeString"
+DEFINE_MKX_BINARY="Ebml::Binary"
+DEFINE_MKX_BINARY_CONS="Ebml::Binary"
+DEFINE_MKX_FLOAT="Ebml::Float"
+DEFINE_MKX_FLOAT_DEF="Ebml::Float"
+DEFINE_MKX_DATE="Ebml::Date"
 
-  FIRST=1
-
-  egrep '^EbmlId.*TheId' $CPP | (while read LINE; do
-    ID=`echo "$LINE" | sed 's/TheId.*(/ /' | awk '{ print $3 }' | sed s/,// | lower`
-    LENGTH=`echo "$LINE" | sed 's/TheId.*(/ /' | awk '{ print $4 }' | sed 's/);//'`
-    NAME=`echo "$LINE" | sed 's/_TheId.*//' | awk '{ print $2 }' | sed s/Kax//`
-    PARENT=`egrep "class.*Kax${NAME} *:" $H | sed 's/:/ : /g' | awk '{ print $6 }' | sed 's/^Ebml/Ebml::/'`
-    if [ $FIRST -eq 1 ]; then
-      echo "  # From ${BASE}.cpp"
-      FIRST=0
-    fi
+CPP="$MATROSKADIR/KaxSemantic.cpp"
+egrep '^DEFINE_MKX_' $CPP | (while read LINE; do
+    ID=`echo "$LINE" | awk -F"," '{ gsub("[ \t\"]", ""); print tolower($2) }'`
+    LENGTH=`echo "$LINE" | awk -F"," '{ gsub("[ \t\"]", ""); print $3 }'`
+    NAME=`echo "$LINE" | awk -F"[,\)]" '{ gsub("[ \t\"]", ""); print $(5) }'`
+    if [ "$NAME" = ";" ]; then NAME=`echo "$LINE" | awk -F"[,\)]" '{ gsub("[ \t\"]", ""); print $(4) }'`; fi
+    PARENT=`echo "$LINE" | awk -F"(" '{ gsub("[ \t\"]", ""); print $1 }'`
     cat <<EOF
-  class ${NAME} < ${PARENT}
+  class ${NAME} < ${!PARENT}
     def ${NAME}.global_id
       @@id ||= Ebml::Id.new(${ID}, ${LENGTH})
       return @@id
@@ -77,6 +86,5 @@ for CPP in "$MATROSKADIR"/*.cpp ; do
 EOF
 
     done)
-done
 
 echo end
