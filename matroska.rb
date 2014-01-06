@@ -36,7 +36,7 @@ module Matroska
         raise DataError, "Data size invalid for an Ebml::Id"
       end
       v = 0
-      @value.unpack("C*").each { |b| v = (v << 8) + b }
+      @value.each { |b| v = (v << 8) + b }
       return Ebml::Id.new(v, @data_size)
     end
   end                           # class SeekID
