@@ -21,7 +21,11 @@ module Ebml
     def read(ef)
       @value = 0
       1.upto(@data_size) do
-        byte = ef.io.readchar
+        if RUBY_VERSION >= '1.8.7'
+          byte = ef.io.readbyte
+        else
+          byte = ef.io.readchar
+        end
         @value = (@value << 8) | byte
       end
 

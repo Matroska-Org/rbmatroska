@@ -59,7 +59,11 @@ module Ebml
     def read_id
       id = 0
 
-      byte = @io.getc
+      if RUBY_VERSION >= '1.8.7'
+        byte = @io.getbyte
+      else
+        byte = @io.getc
+      end
       return nil if (byte == nil)
 
       esize = entity_size?(byte)
@@ -67,21 +71,33 @@ module Ebml
       id = esize[1]
 
       1.upto(esize[0] - 1) do |i|
-        byte = @io.readchar
+        if RUBY_VERSION >= '1.8.7'
+          byte = @io.readbyte
+        else
+          byte = @io.readchar
+        end
         id = id * 256 + byte
       end
       return Id.new(id, esize[0])
     end
 
     def read_size
-      byte = @io.getc
+      if RUBY_VERSION >= '1.8.7'
+        byte = @io.getbyte
+      else
+        byte = @io.getc
+      end
       return nil if (byte == nil)
 
       esize = entity_size?(byte, true)
 
       size = esize[1]
       1.upto(esize[0] - 1) do
-        byte = @io.readchar
+        if RUBY_VERSION >= '1.8.7'
+          byte = @io.readbyte
+        else
+          byte = @io.readchar
+        end
         size = size * 256 + byte
       end
       return [size, esize[0]]
